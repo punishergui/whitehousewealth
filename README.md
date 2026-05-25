@@ -161,41 +161,89 @@ Sync runs automatically every 15 minutes via the Celery worker, or can be trigge
 
 ---
 
-## AI Configuration
+## Agent Integration
 
-The AI advisor answers questions like:
+WHITE HOUSE WEALTH OS exposes a thin data API (`/api/agent/*`) so an external AI agent — such as a [Nous Research Hermes](https://huggingface.co/NousResearch) model running in a sidecar container — can read financial data and write back AI-derived results. WHW itself makes **no** AI calls.
 
-- "How much did I spend on restaurants last quarter?"
-- "Am I on track to hit my emergency fund goal by December?"
-- "What subscriptions have I not used in the past 60 days?"
-- "Show me my top 5 spending categories as a percentage of income."
+### Setup
 
-### Anthropic Claude (recommended)
+1. Generate a shared secret:
+   ```bash
+   openssl rand -hex 32
+   ```
+2. Add it to `.env`:
+   ```env
+   AGENT_API_KEY=<your-secret>
+   ```
+3. Restart the stack: `make down && make up`
+4. Create the Docker bridge network (once, on the host):
+   ```bash
+   docker network create hermes_whw_bridge
+   ```
+   The `api` and `worker` containers join this network automatically — no port exposure needed.
 
-```env
-AI_PROVIDER=anthropic
-ANTHROPIC_API_KEY=sk-ant-...
+### Authentication
+
+Every request must include:
 ```
-
-Uses `claude-sonnet-4-6` by default. Claude has strong financial reasoning and safe, grounded responses.
-
-### OpenAI GPT-4
-
-```env
-AI_PROVIDER=openai
-OPENAI_API_KEY=sk-...
+X-Agent-Key: <AGENT_API_KEY>
 ```
+Returns `401` if the key is missing or wrong.
 
-Uses `gpt-4o` by default.
+### Endpoints
 
-### Ollama (local / offline)
+All routes are prefixed `/api/agent`.
 
-```env
-AI_PROVIDER=ollama
-OLLAMA_BASE_URL=http://host.docker.internal:11434
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/snapshot` | Full financial snapshot (accounts, goals, net worth, recent 30d transactions) |
+| `GET` | `/uncategorized-transactions?since=YYYY-MM-DD` | Transactions with no category |
+| `GET` | `/categories` | All household categories |
+| `POST` | `/categorize` | Bulk-set transaction categories + log confidence/reasoning |
+| `POST` | `/briefing` | Post today's morning briefing (shown on dashboard) |
+| `POST` | `/priorities` | Replace this week's priorities list (shown on dashboard) |
+| `POST` | `/anomalies` | Append detected spending anomalies |
+| `POST` | `/sync-request` | Queue a job for the agent to pick up |
+| `GET` | `/jobs/pending` | List pending jobs |
+| `POST` | `/jobs/{job_id}/complete` | Mark a job done with a result summary |
+
+Append `?household_id=<uuid>` to any endpoint to target a specific household; omit it to use the first household in the database.
+
+### curl examples
+
+```bash
+BASE=http://localhost:8000/api/agent
+KEY=your-agent-api-key
+
+# Get snapshot
+curl -s -H "X-Agent-Key: $KEY" $BASE/snapshot | jq .
+
+# Get uncategorized transactions since Jan 1
+curl -s -H "X-Agent-Key: $KEY" "$BASE/uncategorized-transactions?since=2026-01-01" | jq .
+
+# Categorize a transaction
+curl -s -X POST -H "X-Agent-Key: $KEY" -H "Content-Type: application/json" \
+  -d '{"assignments":[{"transaction_id":"<uuid>","category_id":"<uuid>","confidence":0.92,"reasoning":"Recurring Netflix charge"}]}' \
+  $BASE/categorize
+
+# Post a daily briefing
+curl -s -X POST -H "X-Agent-Key: $KEY" -H "Content-Type: application/json" \
+  -d '{"title":"Morning Briefing","body":"Your safe-to-spend is **$1,240**. Three bills due this week.","for_date":"2026-05-25"}' \
+  $BASE/briefing
+
+# Post weekly priorities
+curl -s -X POST -H "X-Agent-Key: $KEY" -H "Content-Type: application/json" \
+  -d '{"items":[{"title":"Pay Amex before Thursday","subtitle":"Avoid $35 late fee","severity":"high","deadline":"2026-05-29"}]}' \
+  $BASE/priorities
+
+# Poll for pending jobs
+curl -s -H "X-Agent-Key: $KEY" $BASE/jobs/pending | jq .
+
+# Mark a job complete
+curl -s -X POST -H "X-Agent-Key: $KEY" -H "Content-Type: application/json" \
+  -d '{"result_summary":"Categorized 14 transactions, posted briefing"}' \
+  $BASE/jobs/<job_id>/complete
 ```
-
-Pull a model first: `ollama pull llama3`. Financial reasoning quality varies by model size.
 
 ---
 

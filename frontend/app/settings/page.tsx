@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   User, Home, Zap, Bot, Moon, Sun, Check, AlertCircle, Loader2,
-  RefreshCw, ExternalLink, ChevronRight,
+  RefreshCw, Copy, Activity,
 } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { formatCurrency } from '@/lib/formatters'
@@ -360,45 +360,101 @@ function FireflySection() {
   )
 }
 
-// ── AI Provider Section ────────────────────────────────────────────────────────
+// ── Agent Integrations Section ─────────────────────────────────────────────────
 
-function AIProviderSection() {
-  const [ai, setAi] = useState<{ provider: string; model: string; has_key: boolean } | null>(null)
+type AgentJob = {
+  id: string
+  task: string
+  status: string
+  note: string | null
+  created_at: string
+  completed_at: string | null
+}
+
+function IntegrationsSection() {
+  const [data, setData] = useState<{
+    key_configured: boolean
+    key_preview: string
+    jobs: AgentJob[]
+  } | null>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    apiGet<typeof ai>('/settings/ai')
-      .then(setAi)
-      .catch(() => setAi({ provider: 'anthropic', model: 'claude-opus-4-5', has_key: false }))
+    apiGet<typeof data>('/settings/agent')
+      .then(setData)
+      .catch(() => setData({ key_configured: false, key_preview: '', jobs: [] }))
   }, [])
 
-  const providerLabels: Record<string, string> = {
-    anthropic: 'Anthropic Claude',
-    openai: 'OpenAI GPT',
-    ollama: 'Ollama (local)',
+  const handleCopy = () => {
+    if (data?.key_preview) {
+      navigator.clipboard.writeText(data.key_preview).catch(() => {})
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  const statusColor: Record<string, string> = {
+    pending: 'text-amber-400',
+    done: 'text-emerald-400',
+    processing: 'text-blue-400',
   }
 
   return (
-    <Section icon={Bot} title="AI Provider">
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Provider">
-            <input className={readonlyClass} value={providerLabels[ai?.provider ?? ''] ?? ai?.provider ?? '…'} readOnly />
+    <Section icon={Bot} title="Hermes Agent">
+      <div className="space-y-5">
+        {/* Key status */}
+        <div className="space-y-2">
+          <Field label="Agent API Key">
+            <div className="flex gap-2">
+              <input
+                className={readonlyClass + ' flex-1'}
+                value={data?.key_configured ? data.key_preview : 'Not configured'}
+                readOnly
+              />
+              {data?.key_configured && (
+                <button
+                  onClick={handleCopy}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs border border-white/[0.08] rounded-xl text-white/40 hover:text-white/70 hover:bg-white/[0.04] transition-all"
+                >
+                  {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                </button>
+              )}
+            </div>
           </Field>
-          <Field label="Model">
-            <input className={readonlyClass} value={ai?.model ?? '…'} readOnly />
-          </Field>
+          {!data?.key_configured && (
+            <p className="text-[10px] text-amber-400/70">
+              Set <code className="bg-white/[0.05] px-1 rounded">AGENT_API_KEY</code> in your <code className="bg-white/[0.05] px-1 rounded">.env</code> and restart the API container.
+            </p>
+          )}
         </div>
-        <div className="flex items-center gap-2.5">
-          <div
-            className={`w-2 h-2 rounded-full ${ai?.has_key ? 'bg-emerald-400' : 'bg-amber-400'}`}
-          />
-          <span className="text-xs text-white/40">
-            {ai?.has_key ? 'API key configured' : 'No API key set — AI chat will be unavailable'}
-          </span>
+
+        {/* Recent jobs */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Activity size={12} className="text-white/30" />
+            <span className="text-[10px] text-white/30 uppercase tracking-wider">Recent Agent Jobs</span>
+          </div>
+          {data?.jobs.length === 0 ? (
+            <p className="text-xs text-white/20 italic">No jobs yet — the Hermes agent hasn't connected.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {data?.jobs.map((job) => (
+                <div
+                  key={job.id}
+                  className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.04]"
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs text-white/70 truncate">{job.task}</p>
+                    {job.note && <p className="text-[10px] text-white/30 truncate">{job.note}</p>}
+                  </div>
+                  <span className={`text-[10px] font-semibold flex-shrink-0 ml-3 ${statusColor[job.status] ?? 'text-white/40'}`}>
+                    {job.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        <p className="text-[10px] text-white/20">
-          Change provider via the <code className="text-white/30">AI_PROVIDER</code> environment variable and restart the API container.
-        </p>
       </div>
     </Section>
   )
@@ -447,7 +503,7 @@ export default function SettingsPage() {
         <ProfileSection />
         <HouseholdSection />
         <FireflySection />
-        <AIProviderSection />
+        <IntegrationsSection />
         <ThemeSection />
       </div>
     </div>

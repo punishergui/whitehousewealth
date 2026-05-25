@@ -15,6 +15,7 @@ from app.models.budget import Budget, BudgetPeriod
 from app.models.goal import Goal
 from app.models.transaction import Category, Transaction
 from app.models.bill import Bill
+from app.models.agent import AgentBriefing, AgentPriority
 
 
 # ── Safe-to-Spend Calculation ──────────────────────────────────────────────────
@@ -496,6 +497,38 @@ async def get_command_center_data(
             "account_id": str(bill.account_id) if bill.account_id else None,
         })
 
+    # Agent briefing (latest for today or most recent)
+    briefing_result = await db.execute(
+        select(AgentBriefing)
+        .where(AgentBriefing.household_id == household_id)
+        .order_by(AgentBriefing.for_date.desc(), AgentBriefing.created_at.desc())
+        .limit(1)
+    )
+    briefing_row = briefing_result.scalar_one_or_none()
+    hermes_briefing = briefing_row.body if briefing_row else ""
+
+    # Agent priorities → weekly_priorities format
+    priorities_result = await db.execute(
+        select(AgentPriority)
+        .where(AgentPriority.household_id == household_id)
+        .order_by(AgentPriority.position.asc())
+        .limit(10)
+    )
+    severity_to_urgency = {"high": "high", "medium": "medium", "low": "low"}
+    severity_to_type = {"high": "action", "medium": "alert", "low": "opportunity"}
+    weekly_priorities = [
+        {
+            "id": str(p.id),
+            "title": p.title,
+            "description": p.subtitle or "",
+            "urgency": severity_to_urgency.get(p.severity, "medium"),
+            "type": severity_to_type.get(p.severity, "alert"),
+            "amount": float(p.amount) if p.amount is not None else None,
+            "deadline": p.deadline.isoformat() if p.deadline else None,
+        }
+        for p in priorities_result.scalars().all()
+    ]
+
     return {
         "safe_to_spend": safe_to_spend,
         "net_worth": {
@@ -513,5 +546,7 @@ async def get_command_center_data(
         "goals": goals_data,
         "upcoming_bills": upcoming_bills_data,
         "forecast": forecast,
+        "hermes_briefing": hermes_briefing,
+        "weekly_priorities": weekly_priorities,
         "generated_at": datetime.now(tz=timezone.utc).isoformat(),
     }

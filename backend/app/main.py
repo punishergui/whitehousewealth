@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import engine
-from app.routers import dashboard, family, fire, hermes, money, scenarios, wealth, bills
+from app.routers import dashboard, family, fire, hermes, money, scenarios, wealth, bills, agent
 from app.routers import sync, settings as settings_router
 from app.auth.router import router as auth_router
 
@@ -52,6 +52,7 @@ app.include_router(hermes.router, tags=["hermes"])
 app.include_router(sync.router, prefix="/sync", tags=["sync"])
 app.include_router(settings_router.router, prefix="/settings", tags=["settings"])
 app.include_router(bills.router, tags=["bills"])
+app.include_router(agent.router, prefix="/api", tags=["agent"])
 
 
 @app.get("/health", tags=["health"])
