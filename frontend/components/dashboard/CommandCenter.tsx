@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { RefreshCw, Check } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { SafeToSpendCard } from './SafeToSpendCard'
 import { CashPositionCard } from './CashPositionCard'
 import { EmergencyFundGauge } from './EmergencyFundGauge'
@@ -17,6 +17,7 @@ import type { DashboardData } from '@/types'
 
 interface CommandCenterProps {
   data: DashboardData
+  onRefresh?: () => void
 }
 
 const stagger = {
@@ -32,48 +33,46 @@ const fadeUp = {
   show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
 }
 
-function SyncAgentButton() {
-  const [state, setState] = useState<'idle' | 'loading' | 'done'>('idle')
+export function CommandCenter({ data, onRefresh }: CommandCenterProps) {
+  const [syncing, setSyncing] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const handleSync = async () => {
-    if (state === 'loading') return
-    setState('loading')
+  const handleSyncAI = async () => {
+    if (syncing) return
+    setSyncing(true)
+    setToast(null)
+
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('whwos_token') : null
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'}/api/agent/sync-request`, {
+      await fetch('/api/sync-ai', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        // The frontend doesn't hold the agent key — this hits a user-auth'd endpoint to
-        // queue a job that the Hermes agent will pick up on its next poll.
-        body: JSON.stringify({ task: 'all', note: 'Manual sync from dashboard' }),
       })
-      setState('done')
-      setTimeout(() => setState('idle'), 3000)
+
+      setToast('AI sync requested — results appear in ~30 seconds.')
+
+      // Auto-refresh every 5s for 60s to pick up agent results
+      let elapsed = 0
+      pollRef.current = setInterval(() => {
+        elapsed += 5
+        onRefresh?.()
+        if (elapsed >= 60) {
+          clearInterval(pollRef.current!)
+          pollRef.current = null
+        }
+      }, 5000)
     } catch {
-      setState('idle')
+      setToast('Sync request failed — check your connection.')
+    } finally {
+      setSyncing(false)
+      setTimeout(() => setToast(null), 8000)
     }
   }
 
-  return (
-    <button
-      onClick={handleSync}
-      disabled={state === 'loading'}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 transition-all duration-200 text-xs font-medium disabled:opacity-60"
-    >
-      {state === 'done' ? (
-        <Check size={12} className="text-emerald-400" />
-      ) : (
-        <RefreshCw size={12} className={state === 'loading' ? 'animate-spin' : ''} />
-      )}
-      {state === 'done' ? 'Queued' : state === 'loading' ? 'Syncing…' : 'Sync AI'}
-    </button>
-  )
-}
-
-export function CommandCenter({ data }: CommandCenterProps) {
   return (
     <motion.div
       variants={stagger}
@@ -81,20 +80,36 @@ export function CommandCenter({ data }: CommandCenterProps) {
       animate="show"
       className="p-4 lg:p-6 space-y-4"
     >
-      {/* ─── Header bar ─── */}
+      {/* ─── Header row with Sync AI button ─── */}
       <div className="flex items-center justify-between">
-        <p className="text-[10px] text-white/30 uppercase tracking-widest">Command Center</p>
-        <SyncAgentButton />
+        <p className="text-[11px] text-white/25">Updated less than a minute ago</p>
+        <div className="flex items-center gap-3">
+          {toast && (
+            <motion.span
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-[11px] text-emerald-400"
+            >
+              {toast}
+            </motion.span>
+          )}
+          <button
+            onClick={handleSyncAI}
+            disabled={syncing}
+            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-blue-600/20 border border-blue-500/30 text-blue-400 hover:bg-blue-600/30 hover:border-blue-500/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
+            Sync AI
+          </button>
+        </div>
       </div>
 
       {/* ─── Row 1: Hero metrics ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Safe to Spend — spans 1 col on lg */}
         <motion.div variants={fadeUp} className="lg:col-span-1">
           <SafeToSpendCard data={data} />
         </motion.div>
 
-        {/* Cash Position */}
         <motion.div variants={fadeUp}>
           <CashPositionCard
             accounts={data.accounts}
@@ -102,7 +117,6 @@ export function CommandCenter({ data }: CommandCenterProps) {
           />
         </motion.div>
 
-        {/* Emergency Fund */}
         <motion.div variants={fadeUp}>
           <EmergencyFundGauge
             current={data.emergency_fund.current}
@@ -115,17 +129,14 @@ export function CommandCenter({ data }: CommandCenterProps) {
 
       {/* ─── Row 2: Priorities + Debt + Bills ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Weekly Priorities */}
         <motion.div variants={fadeUp}>
-          <WeeklyPriorities priorities={data.weekly_priorities} />
+          <WeeklyPriorities priorities={data.priorities} />
         </motion.div>
 
-        {/* Debt Waterfall — takes more space */}
         <motion.div variants={fadeUp}>
           <DebtWaterfall debts={data.debts} />
         </motion.div>
 
-        {/* Upcoming Bills */}
         <motion.div variants={fadeUp}>
           <UpcomingBills bills={data.upcoming_bills} />
         </motion.div>
@@ -133,19 +144,16 @@ export function CommandCenter({ data }: CommandCenterProps) {
 
       {/* ─── Row 3: Sinking Funds + Forecast + Hermes + Scenarios ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {/* Sinking Funds — 2 cols */}
         <motion.div variants={fadeUp} className="lg:col-span-1">
           <SinkingFunds funds={data.sinking_funds} />
         </motion.div>
 
-        {/* Monthly Forecast — 1.5 cols */}
         <motion.div variants={fadeUp} className="lg:col-span-2">
           <MonthlyForecast forecast={data.monthly_forecast} />
         </motion.div>
 
-        {/* Hermes Briefing + Quick Scenarios */}
         <motion.div variants={fadeUp} className="lg:col-span-1 space-y-4">
-          <HermesBriefing briefing={data.hermes_briefing} />
+          <HermesBriefing briefing={data.briefing} />
           <QuickScenarios />
         </motion.div>
       </div>

@@ -18,11 +18,6 @@ from app.models.household import Household
 router = APIRouter(prefix="/hermes", tags=["hermes"])
 
 
-class ChatRequest(BaseModel):
-    message: str = Field(max_length=4000)
-    conversation_id: uuid.UUID | None = None
-
-
 class ConversationCreate(BaseModel):
     title: str = Field(default="New Conversation", max_length=300)
 
@@ -107,43 +102,28 @@ async def get_conversation(
 
 @router.post("/chat")
 async def chat(
-    body: ChatRequest,
-    household: Household = Depends(get_current_household),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    _household: Household = Depends(get_current_household),
+    _current_user: User = Depends(get_current_user),
 ) -> dict:
-    """Chat is handled by the external Hermes agent via the Agent API."""
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail="Chat inference is handled by the external Hermes agent. Use the Agent API.",
-    )
+    """Chat is now handled by the external Hermes agent via Discord or Sync AI."""
+    return {
+        "reply": (
+            "Hermes is thinking elsewhere. Chat with Hermes via Discord, "
+            "or use the Sync AI button on the dashboard to request a new briefing."
+        ),
+        "model": None,
+    }
 
 
 @router.get("/briefing")
 async def get_daily_briefing(
-    household: Household = Depends(get_current_household),
-    db: AsyncSession = Depends(get_db),
+    _household: Household = Depends(get_current_household),
 ) -> dict:
-    """Return the latest briefing written by the Hermes agent."""
-    result = await db.execute(
-        select(AgentBriefing)
-        .where(AgentBriefing.household_id == household.id)
-        .order_by(AgentBriefing.for_date.desc(), AgentBriefing.created_at.desc())
-        .limit(1)
-    )
-    briefing = result.scalar_one_or_none()
-    if not briefing:
-        return {
-            "briefing": "No briefing available yet. The Hermes agent will post one soon.",
-            "title": "",
-            "for_date": None,
-            "household_name": household.name,
-        }
+    """Briefings are now written by the external Hermes agent via POST /api/agent/briefing."""
     return {
-        "briefing": briefing.body,
-        "title": briefing.title,
-        "for_date": briefing.for_date.isoformat() if briefing.for_date else None,
-        "household_name": household.name,
+        "briefing": (
+            "No briefing yet — run Sync AI from the dashboard to request one."
+        )
     }
 
 

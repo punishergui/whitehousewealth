@@ -1,95 +1,99 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime
-from decimal import Decimal
+from datetime import datetime
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, UUIDPrimaryKey
+from app.models.base import Base, TimestampMixin
 
 
-class AgentBriefing(UUIDPrimaryKey, Base):
+class AgentBriefing(Base, TimestampMixin):
     __tablename__ = "agent_briefings"
 
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
     household_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
-    for_date: Mapped[date | None] = mapped_column(Date)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default="now()"
-    )
+    for_date: Mapped[datetime] = mapped_column(Date, nullable=False)
+
+    household = relationship("Household", foreign_keys=[household_id])
 
 
-class AgentPriority(UUIDPrimaryKey, Base):
+class AgentPriority(Base, TimestampMixin):
     __tablename__ = "agent_priorities"
 
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
     household_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    title: Mapped[str] = mapped_column(String(300), nullable=False)
-    subtitle: Mapped[str | None] = mapped_column(Text)
-    amount: Mapped[Decimal | None] = mapped_column(Numeric(precision=12, scale=2))
-    deadline: Mapped[date | None] = mapped_column(Date)
-    severity: Mapped[str] = mapped_column(String(20), nullable=False, default="medium")
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    subtitle: Mapped[str | None] = mapped_column(Text, nullable=True)
+    amount: Mapped[float | None] = mapped_column(Numeric(18, 2), nullable=True)
+    deadline: Mapped[datetime | None] = mapped_column(Date, nullable=True)
+    severity: Mapped[str] = mapped_column(String(20), nullable=False, default="info")
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default="now()"
-    )
+
+    household = relationship("Household", foreign_keys=[household_id])
 
 
-class AgentAnomaly(UUIDPrimaryKey, Base):
+class AgentAnomaly(Base, TimestampMixin):
     __tablename__ = "agent_anomalies"
 
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
     household_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    title: Mapped[str] = mapped_column(String(300), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text)
-    amount: Mapped[Decimal | None] = mapped_column(Numeric(precision=12, scale=2))
-    transaction_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="SET NULL"), nullable=True
-    )
+    description: Mapped[str] = mapped_column(Text, nullable=False)
     severity: Mapped[str] = mapped_column(String(20), nullable=False, default="medium")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default="now()"
-    )
+    category: Mapped[str] = mapped_column(Text, nullable=False)
+    amount: Mapped[float | None] = mapped_column(Numeric(18, 2), nullable=True)
+
+    household = relationship("Household", foreign_keys=[household_id])
 
 
-class AgentCategorizationLog(UUIDPrimaryKey, Base):
+class AgentCategorizationLog(Base, TimestampMixin):
     __tablename__ = "agent_categorization_log"
 
-    household_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
     )
     transaction_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    category_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("categories.id", ondelete="CASCADE"), nullable=False
+    category_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
     )
-    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
-    reasoning: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default="now()"
-    )
+    reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Numeric(4, 3), nullable=True)
+    agent_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    transaction = relationship("Transaction", foreign_keys=[transaction_id])
+    category = relationship("Category", foreign_keys=[category_id])
 
 
-class AgentJob(UUIDPrimaryKey, Base):
+class AgentJob(Base, TimestampMixin):
     __tablename__ = "agent_jobs"
 
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
     household_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("households.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    task: Mapped[str] = mapped_column(String(200), nullable=False)
-    note: Mapped[str | None] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
-    result_summary: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default="now()"
-    )
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    task: Mapped[str] = mapped_column(String(50), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, server_default=text("'pending'"))
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    household = relationship("Household", foreign_keys=[household_id])

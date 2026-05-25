@@ -359,6 +359,58 @@ make dev-frontend  # starts next dev
 
 ---
 
+## Agent Integration
+
+WHW is now an **AI-free data platform**. All AI reasoning is performed by an external
+[Hermes](https://github.com/NousResearch/hermes) agent running in a separate Docker
+container on the same TrueNAS box. WHW exposes a read/write Agent API; the agent
+reads financial context, reasons externally, and posts results back.
+
+### Architecture
+
+```
+┌─────────────────────┐        X-Agent-Key        ┌──────────────────────┐
+│   Hermes Agent      │ ──── GET /api/agent/* ───► │   WHW API (FastAPI)  │
+│  (separate compose) │ ◄─── POST /api/agent/* ─── │   + PostgreSQL       │
+└─────────────────────┘                            └──────────────────────┘
+        │                                                    │
+        │  hermes_whw_bridge (Docker network)               │
+        └───────────────────────────────────────────────────┘
+```
+
+WHW never calls any AI provider directly. It only stores and displays data
+written by the agent.
+
+### Network Setup
+
+Before running `docker compose up`, create the shared bridge network:
+
+```bash
+docker network create hermes_whw_bridge
+```
+
+This must be done once on the TrueNAS host. The `api` and `worker` services join
+both the internal `default` network and `hermes_whw_bridge`. The Hermes agent's
+compose file must also add `hermes_whw_bridge` as an external network.
+
+### Authentication
+
+Every request to `/api/agent/*` must include:
+
+```
+X-Agent-Key: <your-AGENT_API_KEY>
+```
+
+Generate a key: `openssl rand -hex 32`. Set it as `AGENT_API_KEY` in `.env`.
+Invalid or missing keys return `401 Unauthorized`.
+
+### Full Endpoint Reference
+
+See [`docs/AGENT.md`](docs/AGENT.md) for the complete endpoint reference with
+curl examples and a worked categorization walkthrough.
+
+---
+
 ## Contributing
 
 1. Fork the repository and create a feature branch from `main`.

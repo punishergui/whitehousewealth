@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from pydantic import AnyHttpUrl, field_validator
+from typing import Literal
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,7 +37,8 @@ class Settings(BaseSettings):
     FIREFLY_PAT: str = ""
 
     # ── Agent API ─────────────────────────────────────────────────────────────
-    AGENT_API_KEY: str = ""
+    # Shared secret that the external Hermes agent sends in X-Agent-Key header.
+    AGENT_API_KEY: str = "change-me-generate-with-openssl-rand-hex-32"
 
     # ── CORS ──────────────────────────────────────────────────────────────────
     CORS_ORIGINS: list[str] = [

@@ -120,6 +120,33 @@ export interface WeeklyPriority {
   deadline?: string
 }
 
+export type AgentSeverity = 'urgent' | 'warning' | 'info' | 'positive'
+
+export interface AgentPriority {
+  id: string
+  title: string
+  subtitle?: string | null
+  amount?: number | null
+  deadline?: string | null
+  severity: AgentSeverity
+  position: number
+}
+
+export interface AgentBriefing {
+  title: string
+  body: string
+  for_date: string
+}
+
+export interface AgentAnomaly {
+  id: string
+  description: string
+  severity: 'low' | 'medium' | 'high'
+  category: string
+  amount?: number | null
+  created_at: string
+}
+
 export interface ForecastPoint {
   date: string
   balance_30: number
@@ -162,6 +189,9 @@ export interface DashboardData {
   total_assets: number
   total_liabilities: number
   last_updated: string
+  briefing?: AgentBriefing | null
+  priorities?: AgentPriority[]
+  anomalies?: AgentAnomaly[]
 }
 
 export type ScenarioType =

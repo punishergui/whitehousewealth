@@ -15,7 +15,7 @@ from app.models.budget import Budget, BudgetPeriod
 from app.models.goal import Goal
 from app.models.transaction import Category, Transaction
 from app.models.bill import Bill
-from app.models.agent import AgentBriefing, AgentPriority
+from app.models.agent import AgentAnomaly, AgentBriefing, AgentPriority
 
 
 # ── Safe-to-Spend Calculation ──────────────────────────────────────────────────
@@ -497,7 +497,7 @@ async def get_command_center_data(
             "account_id": str(bill.account_id) if bill.account_id else None,
         })
 
-    # Agent briefing (latest for today or most recent)
+    # Agent briefing — latest by for_date
     briefing_result = await db.execute(
         select(AgentBriefing)
         .where(AgentBriefing.household_id == household_id)
@@ -505,28 +505,52 @@ async def get_command_center_data(
         .limit(1)
     )
     briefing_row = briefing_result.scalar_one_or_none()
-    hermes_briefing = briefing_row.body if briefing_row else ""
+    briefing_data = (
+        {
+            "title": briefing_row.title,
+            "body": briefing_row.body,
+            "for_date": briefing_row.for_date.isoformat(),
+        }
+        if briefing_row
+        else None
+    )
 
-    # Agent priorities → weekly_priorities format
+    # Agent priorities — ordered by position
     priorities_result = await db.execute(
         select(AgentPriority)
         .where(AgentPriority.household_id == household_id)
-        .order_by(AgentPriority.position.asc())
-        .limit(10)
+        .order_by(AgentPriority.position)
     )
-    severity_to_urgency = {"high": "high", "medium": "medium", "low": "low"}
-    severity_to_type = {"high": "action", "medium": "alert", "low": "opportunity"}
-    weekly_priorities = [
+    priorities_data = [
         {
             "id": str(p.id),
             "title": p.title,
-            "description": p.subtitle or "",
-            "urgency": severity_to_urgency.get(p.severity, "medium"),
-            "type": severity_to_type.get(p.severity, "alert"),
+            "subtitle": p.subtitle,
             "amount": float(p.amount) if p.amount is not None else None,
             "deadline": p.deadline.isoformat() if p.deadline else None,
+            "severity": p.severity,
+            "position": p.position,
         }
         for p in priorities_result.scalars().all()
+    ]
+
+    # Agent anomalies — most recent 5
+    anomalies_result = await db.execute(
+        select(AgentAnomaly)
+        .where(AgentAnomaly.household_id == household_id)
+        .order_by(AgentAnomaly.created_at.desc())
+        .limit(5)
+    )
+    anomalies_data = [
+        {
+            "id": str(a.id),
+            "description": a.description,
+            "severity": a.severity,
+            "category": a.category,
+            "amount": float(a.amount) if a.amount is not None else None,
+            "created_at": a.created_at.isoformat(),
+        }
+        for a in anomalies_result.scalars().all()
     ]
 
     return {
@@ -546,7 +570,8 @@ async def get_command_center_data(
         "goals": goals_data,
         "upcoming_bills": upcoming_bills_data,
         "forecast": forecast,
-        "hermes_briefing": hermes_briefing,
-        "weekly_priorities": weekly_priorities,
+        "briefing": briefing_data,
+        "priorities": priorities_data,
+        "anomalies": anomalies_data,
         "generated_at": datetime.now(tz=timezone.utc).isoformat(),
     }

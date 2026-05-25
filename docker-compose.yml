@@ -63,6 +63,9 @@ services:
       - hermes_bridge
     command: >
       sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    networks:
+      - default
+      - hermes_bridge
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.rule=Host(`api.whwos.local`)"
