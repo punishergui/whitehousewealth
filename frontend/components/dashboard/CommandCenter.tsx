@@ -1,6 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { RefreshCw, Check } from 'lucide-react'
 import { SafeToSpendCard } from './SafeToSpendCard'
 import { CashPositionCard } from './CashPositionCard'
 import { EmergencyFundGauge } from './EmergencyFundGauge'
@@ -30,6 +32,47 @@ const fadeUp = {
   show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
 }
 
+function SyncAgentButton() {
+  const [state, setState] = useState<'idle' | 'loading' | 'done'>('idle')
+
+  const handleSync = async () => {
+    if (state === 'loading') return
+    setState('loading')
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('whwos_token') : null
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'}/api/agent/sync-request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        // The frontend doesn't hold the agent key — this hits a user-auth'd endpoint to
+        // queue a job that the Hermes agent will pick up on its next poll.
+        body: JSON.stringify({ task: 'all', note: 'Manual sync from dashboard' }),
+      })
+      setState('done')
+      setTimeout(() => setState('idle'), 3000)
+    } catch {
+      setState('idle')
+    }
+  }
+
+  return (
+    <button
+      onClick={handleSync}
+      disabled={state === 'loading'}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 transition-all duration-200 text-xs font-medium disabled:opacity-60"
+    >
+      {state === 'done' ? (
+        <Check size={12} className="text-emerald-400" />
+      ) : (
+        <RefreshCw size={12} className={state === 'loading' ? 'animate-spin' : ''} />
+      )}
+      {state === 'done' ? 'Queued' : state === 'loading' ? 'Syncing…' : 'Sync AI'}
+    </button>
+  )
+}
+
 export function CommandCenter({ data }: CommandCenterProps) {
   return (
     <motion.div
@@ -38,6 +81,12 @@ export function CommandCenter({ data }: CommandCenterProps) {
       animate="show"
       className="p-4 lg:p-6 space-y-4"
     >
+      {/* ─── Header bar ─── */}
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] text-white/30 uppercase tracking-widest">Command Center</p>
+        <SyncAgentButton />
+      </div>
+
       {/* ─── Row 1: Hero metrics ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Safe to Spend — spans 1 col on lg */}

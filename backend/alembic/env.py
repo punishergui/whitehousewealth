@@ -24,6 +24,7 @@ import app.models.ai            # noqa: F401
 import app.models.sync          # noqa: F401
 import app.auth.models          # noqa: F401
 import app.models.bill          # noqa: F401
+import app.models.agent         # noqa: F401
 
 # Alembic Config object — provides access to values from alembic.ini
 config = context.config

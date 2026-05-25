@@ -47,9 +47,7 @@ services:
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production-32chars}
       FIREFLY_BASE_URL: ${FIREFLY_BASE_URL:-http://firefly:8080}
       FIREFLY_PAT: ${FIREFLY_PAT:-}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      AI_PROVIDER: ${AI_PROVIDER:-anthropic}
+      AGENT_API_KEY: ${AGENT_API_KEY:-}
       CORS_ORIGINS: '["http://localhost:3000","http://frontend:3000"]'
     ports:
       - "8000:8000"
@@ -60,6 +58,9 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+    networks:
+      - default
+      - hermes_bridge
     command: >
       sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     labels:
@@ -78,12 +79,16 @@ services:
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production-32chars}
       FIREFLY_BASE_URL: ${FIREFLY_BASE_URL:-http://firefly:8080}
       FIREFLY_PAT: ${FIREFLY_PAT:-}
+      AGENT_API_KEY: ${AGENT_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
+    networks:
+      - default
+      - hermes_bridge
     labels:
       - "traefik.enable=false"
 
@@ -106,3 +111,10 @@ services:
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  default:
+    driver: bridge
+  hermes_bridge:
+    external: true
+    name: hermes_whw_bridge
