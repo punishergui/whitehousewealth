@@ -273,3 +273,25 @@ async def delete_firefly_config(
     if not config:
         raise HTTPException(status_code=404, detail="Firefly config not found")
     await db.delete(config)
+
+
+# ── AI Provider ────────────────────────────────────────────────────────────────
+
+@router.get('/ai')
+async def get_ai_config() -> dict:
+    """Return the configured AI provider (read-only)."""
+    from app.config import settings as app_settings
+    model_map = {
+        'anthropic': app_settings.ANTHROPIC_MODEL,
+        'openai': app_settings.OPENAI_MODEL,
+        'ollama': app_settings.OLLAMA_MODEL,
+    }
+    return {
+        'provider': app_settings.AI_PROVIDER,
+        'model': model_map.get(app_settings.AI_PROVIDER, 'unknown'),
+        'has_key': bool(
+            app_settings.ANTHROPIC_API_KEY if app_settings.AI_PROVIDER == 'anthropic'
+            else app_settings.OPENAI_API_KEY if app_settings.AI_PROVIDER == 'openai'
+            else True  # ollama is local
+        ),
+    }

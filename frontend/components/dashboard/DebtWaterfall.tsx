@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { CreditCard, AlertTriangle, Clock } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
+import { InfoTooltip } from '@/components/ui/InfoTooltip'
 import { formatCurrency, formatDate } from '@/lib/formatters'
 import { clsx } from 'clsx'
 import type { Debt } from '@/types'
@@ -52,21 +53,24 @@ export function DebtWaterfall({ debts }: DebtWaterfallProps) {
       title="Debt Waterfall"
       subtitle={`${debts.length} debts • ${formatCurrency(totalDebt)} total`}
       headerAction={
-        <div className="flex bg-white/[0.05] rounded-lg p-0.5">
-          {(['avalanche', 'snowball'] as Strategy[]).map((s) => (
-            <button
-              key={s}
-              onClick={() => setStrategy(s)}
-              className={clsx(
-                'px-2.5 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wider transition-all duration-200',
-                strategy === s
-                  ? 'bg-blue-500/20 text-blue-400 shadow-sm'
-                  : 'text-white/30 hover:text-white/60'
-              )}
-            >
-              {s}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <InfoTooltip content="Avalanche pays highest-APR debt first (saves most interest). Snowball pays smallest balance first (builds momentum). Both free up payments for the next debt." />
+          <div className="flex bg-white/[0.05] rounded-lg p-0.5">
+            {(['avalanche', 'snowball'] as Strategy[]).map((s) => (
+              <button
+                key={s}
+                onClick={() => setStrategy(s)}
+                className={clsx(
+                  'px-2.5 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wider transition-all duration-200',
+                  strategy === s
+                    ? 'bg-blue-500/20 text-blue-400 shadow-sm'
+                    : 'text-white/30 hover:text-white/60'
+                )}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
       }
       padding="md"

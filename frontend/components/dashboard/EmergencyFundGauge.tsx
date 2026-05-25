@@ -4,6 +4,7 @@ import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from '
 import { motion } from 'framer-motion'
 import { Shield } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
+import { InfoTooltip } from '@/components/ui/InfoTooltip'
 import { formatCurrency, formatRunway } from '@/lib/formatters'
 
 interface EmergencyFundGaugeProps {
@@ -46,7 +47,13 @@ export function EmergencyFundGauge({
   ]
 
   return (
-    <GlassCard title="Emergency Fund" padding="md">
+    <GlassCard
+      title="Emergency Fund"
+      padding="md"
+      headerAction={
+        <InfoTooltip content="Months of living expenses your emergency fund covers. 3–6 months is the standard target; under 3 months is critical." />
+      }
+    >
       <div className="flex flex-col items-center">
         {/* Radial gauge */}
         <div className="relative w-32 h-20 mb-1">

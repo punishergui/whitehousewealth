@@ -306,4 +306,21 @@ export const hermesApi = {
     ),
 }
 
+
+// ─── Bills ─────────────────────────────────────────────────────────────────────
+
+export const billsApi = {
+  getBills: (): Promise<import("@/types").Bill[]> =>
+    withMockFallback(
+      () => fetchWithAuth<import("@/types").Bill[]>('/bills'),
+      () => []
+    ),
+
+  markAsPaid: (id: string): Promise<void> =>
+    withMockFallback(
+      () => fetchWithAuth<void>(`/bills/${id}/mark-paid`, { method: 'POST' }),
+      () => undefined
+    ),
+}
+
 export default apiClient

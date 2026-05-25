@@ -531,6 +531,8 @@ export const MOCK_FIRE_DATA: FIREData = {
     social_security_benefit: 2400,
     fire_age: 55,
     fire_mode: 'fat',
+    current_age: 35,
+    monthly_contribution: 2800,
   },
   monte_carlo: Array.from({ length: 30 }, (_, i) => {
     const year = 2026 + i

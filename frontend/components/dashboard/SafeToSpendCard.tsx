@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Info, TrendingUp } from 'lucide-react'
 import { formatCurrency } from '@/lib/formatters'
+import { InfoTooltip } from '@/components/ui/InfoTooltip'
 import type { DashboardData } from '@/types'
 
 interface SafeToSpendCardProps {
@@ -75,9 +76,12 @@ export function SafeToSpendCard({ data }: SafeToSpendCardProps) {
 
       <div className="relative p-6">
         <div className="flex items-start justify-between mb-1">
-          <p className="text-xs font-semibold text-white/40 uppercase tracking-widest">
-            Safe to Spend
-          </p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-xs font-semibold text-white/40 uppercase tracking-widest">
+              Safe to Spend
+            </p>
+            <InfoTooltip content="Liquid cash minus your emergency reserve, sinking funds, and bills due in the next 14 days. This is what you can spend without derailing your plan." />
+          </div>
           <button
             onClick={() => setShowBreakdown(!showBreakdown)}
             className="text-white/30 hover:text-white/60 transition-colors duration-200"
