@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     clearError()
     try {
@@ -115,7 +115,7 @@ export default function LoginPage() {
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                   required
                   autoComplete="email"
                   placeholder="you@example.com"
@@ -131,7 +131,7 @@ export default function LoginPage() {
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                     required
                     autoComplete="current-password"
                     placeholder="••••••••"
