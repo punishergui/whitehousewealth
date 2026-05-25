@@ -11,7 +11,7 @@ interface SinkingFundsProps {
   funds: SinkingFund[]
 }
 
-const iconMap: Record<string, React.ComponentType<{ size: number; className?: string }>> = {
+const iconMap: Record<string, React.ComponentType<{ size: number; className?: string; color?: string }>> = {
   plane: Plane,
   car: Car,
   gift: Gift,
@@ -58,7 +58,7 @@ export function SinkingFunds({ funds }: SinkingFundsProps) {
                     className="w-6 h-6 rounded-lg flex items-center justify-center"
                     style={{ backgroundColor: `${fund.color}20` }}
                   >
-                    <Icon size={12} style={{ color: fund.color }} />
+                    <Icon size={12} color={fund.color} />
                   </div>
                   <span
                     className="text-[10px] font-bold"
