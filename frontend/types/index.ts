@@ -245,6 +245,8 @@ export interface FIREAssumptions {
   social_security_benefit: number
   fire_age: number
   fire_mode: FIREMode
+  current_age: number
+  monthly_contribution: number
 }
 
 export interface FIREData {

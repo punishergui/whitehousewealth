@@ -89,10 +89,11 @@ export function AssumptionsEditor({ assumptions, onUpdate, isUpdating }: Assumpt
             <label className="text-[10px] text-white/40 uppercase tracking-wider block mb-1.5">Current Age</label>
             <input
               type="number"
-              value={local.fire_age - Math.round(local.annual_expenses / 10000)}
-              onChange={() => {}}
-              readOnly
-              className="w-full bg-white/[0.03] border border-white/[0.07] rounded-xl px-3 py-2 text-sm text-white/50 text-center"
+              value={local.current_age}
+              onChange={(e) => update('current_age', parseInt(e.target.value) || 18)}
+              min={18}
+              max={100}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/40 transition-colors text-center"
             />
           </div>
           <div>
@@ -101,6 +102,8 @@ export function AssumptionsEditor({ assumptions, onUpdate, isUpdating }: Assumpt
               type="number"
               value={local.fire_age}
               onChange={(e) => update('fire_age', parseInt(e.target.value) || 55)}
+              min={30}
+              max={100}
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/40 transition-colors text-center"
             />
           </div>
@@ -115,10 +118,11 @@ export function AssumptionsEditor({ assumptions, onUpdate, isUpdating }: Assumpt
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">$</span>
             <input
               type="number"
-              value={local.annual_expenses / 12}
-              onChange={(e) => update('annual_expenses', (parseFloat(e.target.value) || 0) * 12)}
+              value={local.monthly_contribution}
+              onChange={(e) => update('monthly_contribution', parseFloat(e.target.value) || 0)}
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-7 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40 transition-colors"
-              placeholder="2800"
+              placeholder="2000"
+              min={0}
             />
           </div>
         </div>
@@ -136,6 +140,7 @@ export function AssumptionsEditor({ assumptions, onUpdate, isUpdating }: Assumpt
               onChange={(e) => update('annual_expenses', parseFloat(e.target.value) || 0)}
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-7 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40 transition-colors"
               placeholder="80000"
+              min={0}
             />
           </div>
         </div>

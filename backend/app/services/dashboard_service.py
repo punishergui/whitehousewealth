@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+import calendar
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
@@ -13,6 +14,7 @@ from app.models.account import Account
 from app.models.budget import Budget, BudgetPeriod
 from app.models.goal import Goal
 from app.models.transaction import Category, Transaction
+from app.models.bill import Bill
 
 
 # ── Safe-to-Spend Calculation ──────────────────────────────────────────────────
@@ -72,19 +74,24 @@ async def calculate_safe_to_spend(
     )
     sinking_funds_total = Decimal(str(sinking_result.scalar() or 0))
 
-    # 4. Imminent obligations — recurring transactions due within 14 days
-    imminent_result = await db.execute(
-        select(func.sum(func.abs(Transaction.amount))).where(
+    # 4. Imminent obligations — bills due within 14 days
+    bills_result = await db.execute(
+        select(Bill).where(
             and_(
-                Transaction.household_id == household_id,
-                Transaction.is_recurring == True,
-                Transaction.type == "expense",
-                Transaction.date >= today,
-                Transaction.date <= horizon_14,
+                Bill.household_id == household_id,
+                Bill.is_active == True,
             )
         )
     )
-    imminent_obligations = Decimal(str(imminent_result.scalar() or 0))
+    active_bills = bills_result.scalars().all()
+    imminent_obligations = Decimal("0")
+    for bill in active_bills:
+        year, month = today.year, today.month
+        last_day = calendar.monthrange(year, month)[1]
+        this_month_due = date(year, month, min(bill.due_day_of_month, last_day))
+        already_paid = bill.last_paid_date and bill.last_paid_date >= this_month_due
+        if not already_paid and today <= this_month_due <= horizon_14:
+            imminent_obligations += bill.amount
 
     # 5. Promo debt reserves (balances on credit accounts with promo expiry < 60 days)
     promo_result = await db.execute(
@@ -448,6 +455,47 @@ async def get_command_center_data(
     # Forecast
     forecast = await get_monthly_forecast(db, household_id)
 
+    # Upcoming bills for dashboard widget
+    bills_q = await db.execute(
+        select(Bill).where(
+            and_(Bill.household_id == household_id, Bill.is_active == True)
+        ).order_by(Bill.due_day_of_month)
+    )
+    active_bills_list = bills_q.scalars().all()
+    upcoming_bills_data = []
+    for bill in active_bills_list:
+        year, month = today.year, today.month
+        last_day = calendar.monthrange(year, month)[1]
+        this_month_due = date(year, month, min(bill.due_day_of_month, last_day))
+        already_paid = bill.last_paid_date and bill.last_paid_date >= this_month_due
+        if already_paid:
+            if month == 12:
+                ny, nm = year + 1, 1
+            else:
+                ny, nm = year, month + 1
+            nd_last = calendar.monthrange(ny, nm)[1]
+            due = date(ny, nm, min(bill.due_day_of_month, nd_last))
+            bill_status = "upcoming"
+        else:
+            due = this_month_due
+            if due < today:
+                bill_status = "overdue"
+            elif due == today:
+                bill_status = "due"
+            else:
+                bill_status = "upcoming"
+        upcoming_bills_data.append({
+            "id": str(bill.id),
+            "name": bill.name,
+            "amount": float(bill.amount),
+            "due_date": due.isoformat(),
+            "status": bill_status,
+            "category": bill.category,
+            "icon": bill.icon,
+            "auto_pay": bill.auto_pay,
+            "account_id": str(bill.account_id) if bill.account_id else None,
+        })
+
     return {
         "safe_to_spend": safe_to_spend,
         "net_worth": {
@@ -463,6 +511,7 @@ async def get_command_center_data(
         "top_spending_categories": top_categories,
         "recent_transactions": recent_txn_data,
         "goals": goals_data,
+        "upcoming_bills": upcoming_bills_data,
         "forecast": forecast,
         "generated_at": datetime.now(tz=timezone.utc).isoformat(),
     }

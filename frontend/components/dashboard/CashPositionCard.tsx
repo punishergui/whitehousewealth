@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { Building2 } from 'lucide-react'
 import { GlassCard } from '@/components/ui/GlassCard'
+import { InfoTooltip } from '@/components/ui/InfoTooltip'
 import { formatCurrency } from '@/lib/formatters'
 import type { Account } from '@/types'
 
@@ -17,7 +18,14 @@ export function CashPositionCard({ accounts, totalCash }: CashPositionCardProps)
   )
 
   return (
-    <GlassCard title="Cash Position" glowColor="blue" padding="md">
+    <GlassCard
+      title="Cash Position"
+      glowColor="blue"
+      padding="md"
+      headerAction={
+        <InfoTooltip content="Combined balance of all checking and savings accounts — your immediately accessible cash, before reserves or obligations." />
+      }
+    >
       <div className="space-y-3">
         {/* Total */}
         <div className="flex items-end justify-between">
