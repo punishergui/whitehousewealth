@@ -15,6 +15,7 @@ from app.models.budget import Budget, BudgetPeriod
 from app.models.goal import Goal
 from app.models.transaction import Category, Transaction
 from app.models.bill import Bill
+from app.models.agent import AgentAnomaly, AgentBriefing, AgentPriority
 
 
 # ── Safe-to-Spend Calculation ──────────────────────────────────────────────────
@@ -496,6 +497,62 @@ async def get_command_center_data(
             "account_id": str(bill.account_id) if bill.account_id else None,
         })
 
+    # Agent briefing — latest by for_date
+    briefing_result = await db.execute(
+        select(AgentBriefing)
+        .where(AgentBriefing.household_id == household_id)
+        .order_by(AgentBriefing.for_date.desc(), AgentBriefing.created_at.desc())
+        .limit(1)
+    )
+    briefing_row = briefing_result.scalar_one_or_none()
+    briefing_data = (
+        {
+            "title": briefing_row.title,
+            "body": briefing_row.body,
+            "for_date": briefing_row.for_date.isoformat(),
+        }
+        if briefing_row
+        else None
+    )
+
+    # Agent priorities — ordered by position
+    priorities_result = await db.execute(
+        select(AgentPriority)
+        .where(AgentPriority.household_id == household_id)
+        .order_by(AgentPriority.position)
+    )
+    priorities_data = [
+        {
+            "id": str(p.id),
+            "title": p.title,
+            "subtitle": p.subtitle,
+            "amount": float(p.amount) if p.amount is not None else None,
+            "deadline": p.deadline.isoformat() if p.deadline else None,
+            "severity": p.severity,
+            "position": p.position,
+        }
+        for p in priorities_result.scalars().all()
+    ]
+
+    # Agent anomalies — most recent 5
+    anomalies_result = await db.execute(
+        select(AgentAnomaly)
+        .where(AgentAnomaly.household_id == household_id)
+        .order_by(AgentAnomaly.created_at.desc())
+        .limit(5)
+    )
+    anomalies_data = [
+        {
+            "id": str(a.id),
+            "description": a.description,
+            "severity": a.severity,
+            "category": a.category,
+            "amount": float(a.amount) if a.amount is not None else None,
+            "created_at": a.created_at.isoformat(),
+        }
+        for a in anomalies_result.scalars().all()
+    ]
+
     return {
         "safe_to_spend": safe_to_spend,
         "net_worth": {
@@ -513,5 +570,8 @@ async def get_command_center_data(
         "goals": goals_data,
         "upcoming_bills": upcoming_bills_data,
         "forecast": forecast,
+        "briefing": briefing_data,
+        "priorities": priorities_data,
+        "anomalies": anomalies_data,
         "generated_at": datetime.now(tz=timezone.utc).isoformat(),
     }

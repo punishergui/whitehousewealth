@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import AnyHttpUrl, field_validator
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,14 +36,9 @@ class Settings(BaseSettings):
     FIREFLY_BASE_URL: str = "http://localhost:8080"
     FIREFLY_PAT: str = ""
 
-    # ── AI Providers ──────────────────────────────────────────────────────────
-    AI_PROVIDER: Literal["anthropic", "openai", "ollama"] = "anthropic"
-    OPENAI_API_KEY: str | None = None
-    ANTHROPIC_API_KEY: str | None = None
-    OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "llama3.2"
-    OPENAI_MODEL: str = "gpt-4o"
-    ANTHROPIC_MODEL: str = "claude-opus-4-5"
+    # ── Agent API ─────────────────────────────────────────────────────────────
+    # Shared secret that the external Hermes agent sends in X-Agent-Key header.
+    AGENT_API_KEY: str = "change-me-generate-with-openssl-rand-hex-32"
 
     # ── CORS ──────────────────────────────────────────────────────────────────
     CORS_ORIGINS: list[str] = [

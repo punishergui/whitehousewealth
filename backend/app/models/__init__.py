@@ -9,6 +9,13 @@ from app.models.fire import RetirementProfile
 from app.models.ai import AIConversation, AIMessage
 from app.models.sync import SyncJob, FireflyConfig
 from app.models.bill import Bill
+from app.models.agent import (
+    AgentBriefing,
+    AgentPriority,
+    AgentAnomaly,
+    AgentCategorizationLog,
+    AgentJob,
+)
 
 __all__ = [
     "Base",
@@ -33,4 +40,9 @@ __all__ = [
     "SyncJob",
     "FireflyConfig",
     "Bill",
+    "AgentBriefing",
+    "AgentPriority",
+    "AgentAnomaly",
+    "AgentCategorizationLog",
+    "AgentJob",
 ]
