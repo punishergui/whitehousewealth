@@ -18,7 +18,7 @@ interface AccountsGridProps {
   accounts: Account[]
 }
 
-const typeIcons: Record<string, React.ComponentType<{ size: number; className?: string }>> = {
+const typeIcons: Record<string, React.ComponentType<{ size: number; className?: string; color?: string }>> = {
   checking: Building2,
   savings: PiggyBank,
   investment: TrendingUp,
@@ -80,7 +80,7 @@ export function AccountsGrid({ accounts }: AccountsGridProps) {
                   className="w-8 h-8 rounded-xl flex items-center justify-center"
                   style={{ backgroundColor: `${account.color}20`, border: `1px solid ${account.color}25` }}
                 >
-                  <Icon size={16} style={{ color: account.color }} />
+                  <Icon size={16} color={account.color} />
                 </div>
                 <span className="text-[10px] text-white/30 uppercase tracking-wider pt-0.5">
                   {typeLabels[account.type]}

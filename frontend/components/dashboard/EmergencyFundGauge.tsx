@@ -70,7 +70,6 @@ export function EmergencyFundGauge({
               {/* Background track */}
               <RadialBar
                 background={{ fill: 'rgba(255,255,255,0.04)' }}
-                clockWise
                 dataKey="value"
                 cornerRadius={4}
               />
