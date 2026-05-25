@@ -8,7 +8,6 @@ from app.models.scenario import Scenario, ScenarioRun
 from app.models.fire import RetirementProfile
 from app.models.ai import AIConversation, AIMessage
 from app.models.sync import SyncJob, FireflyConfig
-from app.auth.models import User, Role, RefreshToken
 
 __all__ = [
     "Base",
@@ -32,7 +31,4 @@ __all__ = [
     "AIMessage",
     "SyncJob",
     "FireflyConfig",
-    "User",
-    "Role",
-    "RefreshToken",
 ]
