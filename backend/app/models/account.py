@@ -43,7 +43,7 @@ class Account(UUIDPrimaryKey, TimestampMixin, Base):
 
     # Relationships
     household: Mapped["Household"] = relationship("Household", back_populates="accounts")
-    transactions: Mapped[list["Transaction"]] = relationship("Transaction", back_populates="account")
+    transactions: Mapped[list["Transaction"]] = relationship("Transaction", back_populates="account", foreign_keys="Transaction.account_id")
 
 
 class Asset(UUIDPrimaryKey, TimestampMixin, Base):
