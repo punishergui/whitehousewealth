@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date as date_
 from decimal import Decimal
 from typing import Any
 
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/money", tags=["money"])
 
 class TransactionCreate(BaseModel):
     account_id: uuid.UUID
-    date: date
+    date: date_
     amount: float
     description: str = Field(max_length=500)
     merchant_name: str | None = Field(default=None, max_length=200)
@@ -35,7 +35,7 @@ class TransactionCreate(BaseModel):
 
 
 class TransactionUpdate(BaseModel):
-    date: date | None = None
+    date: date_ | None = None
     amount: float | None = None
     description: str | None = Field(default=None, max_length=500)
     merchant_name: str | None = Field(default=None, max_length=200)
@@ -58,8 +58,8 @@ class BudgetCreate(BaseModel):
     amount: float
     period: str = "monthly"
     category_id: uuid.UUID | None = None
-    start_date: date | None = None
-    end_date: date | None = None
+    start_date: date_ | None = None
+    end_date: date_ | None = None
     rollover: bool = False
     color: str | None = None
 
@@ -81,8 +81,8 @@ async def list_transactions(
     account_id: uuid.UUID | None = None,
     category_id: uuid.UUID | None = None,
     type: str | None = None,
-    start_date: date | None = None,
-    end_date: date | None = None,
+    start_date: date_ | None = None,
+    end_date: date_ | None = None,
     search: str | None = None,
     household: Household = Depends(get_current_household),
     db: AsyncSession = Depends(get_db),
@@ -362,12 +362,12 @@ def _budget_to_dict(b: Budget) -> dict:
 
 @router.get("/spending-summary")
 async def get_spending_summary(
-    start_date: date | None = None,
-    end_date: date | None = None,
+    start_date: date_ | None = None,
+    end_date: date_ | None = None,
     household: Household = Depends(get_current_household),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    today = date.today()
+    today = date_.today()
     if not start_date:
         start_date = today.replace(day=1)
     if not end_date:
