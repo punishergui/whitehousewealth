@@ -36,6 +36,7 @@ class Household(UUIDPrimaryKey, TimestampMixin, Base):
     retirement_profiles: Mapped[list] = relationship("RetirementProfile", back_populates="household")
     ai_conversations: Mapped[list] = relationship("AIConversation", back_populates="household")
     sync_jobs: Mapped[list] = relationship("SyncJob", back_populates="household")
+    bills: Mapped[list] = relationship("Bill", back_populates="household")
 
 
 class HouseholdMember(UUIDPrimaryKey, TimestampMixin, Base):
